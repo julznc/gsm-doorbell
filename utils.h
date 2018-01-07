@@ -4,9 +4,12 @@
 #include <stdarg.h>
 
 #define DEBUG
+//#undef DEBUG
+
+
+#define __FILENAME__ (__builtin_strrchr(__FILE__, '/') ? __builtin_strrchr(__FILE__, '/') + 1 : __FILE__)
 
 #ifdef DEBUG
-  #define __FILENAME__ (__builtin_strrchr(__FILE__, '/') ? __builtin_strrchr(__FILE__, '/') + 1 : __FILE__)
   #define DBG(fmt, ...)   serial_print("%d %s[%d] " fmt "\r\n", millis(), __FILENAME__, __LINE__, ## __VA_ARGS__)
 #else
   #define DBG(...)

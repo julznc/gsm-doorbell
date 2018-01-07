@@ -69,8 +69,8 @@
 
 class Adafruit_FONA : public FONAStreamType {
  public:
-  Adafruit_FONA(int8_t r);
-  boolean begin(FONAStreamType &port);
+  Adafruit_FONA(int8_t key, int8_t pstat, int8_t rst, int8_t ri);
+  boolean begin(FONAStreamType *port);
   uint8_t type();
 
   // Stream
@@ -82,6 +82,10 @@ class Adafruit_FONA : public FONAStreamType {
 
   // FONA 3G requirements
   boolean setBaudrate(uint16_t baud);
+
+  // Power
+  boolean setPower(boolean on_off); // pulse Key pin
+  boolean reset(void); // pulse Reset pin (hard reset)
 
   // RTC
   boolean enableRTC(uint8_t i);
@@ -195,7 +199,10 @@ class Adafruit_FONA : public FONAStreamType {
 
 
  protected:
+  int8_t _keypin;
+  int8_t _pstatpin;
   int8_t _rstpin;
+  int8_t _ripin;
   uint8_t _type;
 
   char replybuffer[255];
@@ -245,14 +252,16 @@ class Adafruit_FONA : public FONAStreamType {
 class Adafruit_FONA_3G : public Adafruit_FONA {
 
  public:
-  Adafruit_FONA_3G (int8_t r) : Adafruit_FONA(r) { _type = FONA3G_A; }
+  Adafruit_FONA_3G (int8_t key, int8_t pstat, int8_t rst, int8_t ri)
+      : Adafruit_FONA(key, pstat, rst, ri)
+        { _type = FONA3G_A; }
 
-    boolean getBattVoltage(uint16_t *v);
-    boolean playToolkitTone(uint8_t t, uint16_t len);
-    boolean hangUp(void);
-    boolean pickUp(void);
-    boolean enableGPRS(boolean onoff);
-    boolean enableGPS(boolean onoff);
+  boolean getBattVoltage(uint16_t *v);
+  boolean playToolkitTone(uint8_t t, uint16_t len);
+  boolean hangUp(void);
+  boolean pickUp(void);
+  boolean enableGPRS(boolean onoff);
+  boolean enableGPS(boolean onoff);
 
  protected:
     boolean parseReply(FONAFlashStringPtr toreply,

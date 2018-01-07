@@ -2,12 +2,17 @@
 #include "fona.h"
 #include "utils.h"
 
-#define STATUS_LED  13
-#define FONA_RST    2
+
+#define STATUS_LED    13  // arduino led
+
+#define FONA_KEY      12  // Key pin
+#define FONA_PSTAT    10  // Power Status pin
+#define FONA_RST      2   // Reset pin
+#define FONA_RI       11  // Ring Indicator pin
 
 
 HardwareSerial *fonaSerial = &Serial1;
-Adafruit_FONA fona = Adafruit_FONA(FONA_RST);
+Adafruit_FONA fona = Adafruit_FONA(FONA_KEY, FONA_PSTAT, FONA_RST, FONA_RI);
 
 void setup()
 {
@@ -21,9 +26,9 @@ void setup()
 
   pinMode(STATUS_LED, OUTPUT);
 
-  fonaSerial->begin(4800);
+  fonaSerial->begin(9600);
   DBG("detecting fona device...");
-  if (!fona.begin(*fonaSerial)) {
+  if (!fona.begin(fonaSerial)) {
     ERR("Couldn't find FONA");
     while (1) delay(100);
   }
@@ -33,7 +38,7 @@ void setup()
 
 void loop()
 {
-  DBG("running fona %u", fona.type());
+  //DBG("running fona %u", fona.type());
   digitalWrite(STATUS_LED, HIGH);
   delay(500);
   digitalWrite(STATUS_LED, LOW);

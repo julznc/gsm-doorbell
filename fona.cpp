@@ -17,14 +17,12 @@
     // next line per http://postwarrior.com/arduino-ethershield-error-prog_char-does-not-name-a-type/
 
 #include "fona.h"
+#include "utils.h".h"
 
 
-
-
-Adafruit_FONA::Adafruit_FONA(int8_t rst)
+Adafruit_FONA::Adafruit_FONA(int8_t key, int8_t pstat, int8_t rst, int8_t ri)
+  : _keypin(key), _pstatpin(pstat), _rstpin(rst), _ripin(ri), _type(0)
 {
-  _rstpin = rst;
-
   apn = F("FONAnet");
   apnusername = 0;
   apnpassword = 0;
@@ -38,42 +36,28 @@ uint8_t Adafruit_FONA::type(void) {
   return _type;
 }
 
-boolean Adafruit_FONA::begin(Stream &port) {
-  mySerial = &port;
+boolean Adafruit_FONA::begin(Stream *port) {
+  mySerial = port;
 
+  pinMode(_keypin, OUTPUT);
+  pinMode(_pstatpin, INPUT);
   pinMode(_rstpin, OUTPUT);
-  digitalWrite(_rstpin, HIGH);
-  delay(10);
-  digitalWrite(_rstpin, LOW);
-  delay(100);
+  pinMode(_ripin, INPUT);
+
+  digitalWrite(_keypin, HIGH);
   digitalWrite(_rstpin, HIGH);
 
-  DEBUG_PRINTLN(F("Attempting to open comm with ATs"));
-  // give 7 seconds to reboot
-  int16_t timeout = 7000;
-
-  while (timeout > 0) {
-    while (mySerial->available()) mySerial->read();
-    if (sendCheckReply(F("AT"), ok_reply))
-      break;
-    while (mySerial->available()) mySerial->read();
-    if (sendCheckReply(F("AT"), F("AT"))) 
-      break;
-    delay(500);
-    timeout-=500;
+  if (true != setPower(true)) {
+      ERR("unable to turn on");
+      return false;
   }
 
-  if (timeout <= 0) {
-#ifdef ADAFRUIT_FONA_DEBUG
-    DEBUG_PRINTLN(F("Timeout: No response to AT... last ditch attempt."));
-#endif
-    sendCheckReply(F("AT"), ok_reply);
-    delay(100);
-    sendCheckReply(F("AT"), ok_reply);
-    delay(100);
-    sendCheckReply(F("AT"), ok_reply);
-    delay(100);
+  if (true != reset()) {
+      ERR("unable to reset");
+      return false;
   }
+
+  DBG("reset done");
 
   // turn off Echo!
   sendCheckReply(F("ATE0"), ok_reply);
@@ -90,13 +74,12 @@ boolean Adafruit_FONA::begin(Stream &port) {
   flushInput();
 
 
-  DEBUG_PRINT(F("\t---> ")); DEBUG_PRINTLN("ATI");
+  DBG("\t---> ATI");
 
   mySerial->println("ATI");
   readline(500, true);
 
-  DEBUG_PRINT (F("\t<--- ")); DEBUG_PRINTLN(replybuffer);
-
+  DBG("\t<--- %s", replybuffer);
 
 
   if (prog_char_strstr(replybuffer, (prog_char *)F("SIM808 R14")) != 0) {
@@ -134,6 +117,59 @@ boolean Adafruit_FONA::begin(Stream &port) {
   return true;
 }
 
+/********* Power ********************************************/
+
+boolean Adafruit_FONA::setPower(boolean on_off)
+{
+    DBG("%s(%d)", __func__, on_off);
+    int16_t pstat_timeout = 4000;
+    while ((on_off != digitalRead(_pstatpin)) && (pstat_timeout > 0)) {
+        digitalWrite(_keypin, LOW);
+        delay(100);
+        pstat_timeout -= 100;
+    }
+
+    digitalWrite(_keypin, HIGH);
+
+    return (on_off == digitalRead(_pstatpin)); // HIGH = power on
+}
+
+boolean Adafruit_FONA::reset(void)
+{
+    delay(10);
+    digitalWrite(_rstpin, LOW);
+    delay(150);
+    digitalWrite(_rstpin, HIGH);
+
+    DBG("Attempting to open comm with ATs");
+    // give 7 seconds to reboot
+    int16_t timeout = 7000;
+
+    while (timeout > 0) {
+      DBG("mySerial->available()=%d", mySerial->available());
+      while (mySerial->available()) mySerial->read();
+      if (sendCheckReply(F("AT"), ok_reply))
+        break;
+      DBG("mySerial->available()=%d", mySerial->available());
+      while (mySerial->available()) mySerial->read();
+      if (sendCheckReply(F("AT"), F("AT")))
+        break;
+      delay(500);
+      timeout-=500;
+    }
+
+    /*if (timeout <= 0) {
+      DBG("Timeout: No response to AT... last ditch attempt.");
+      sendCheckReply(F("AT"), ok_reply);
+      delay(100);
+      sendCheckReply(F("AT"), ok_reply);
+      delay(100);
+      sendCheckReply(F("AT"), ok_reply);
+      delay(100);
+    }*/
+
+    return (timeout >= 0);
+}
 
 /********* Serial port ********************************************/
 boolean Adafruit_FONA::setBaudrate(uint16_t baud) {
@@ -1809,14 +1845,16 @@ uint8_t Adafruit_FONA::getReply(FONAFlashStringPtr send, uint16_t timeout) {
   flushInput();
 
 
-  DEBUG_PRINT(F("\t---> ")); DEBUG_PRINTLN(send);
+  //DEBUG_PRINT(F("\t---> ")); DEBUG_PRINTLN(send);
+  DBG("\t---> %s", send);
 
 
   mySerial->println(send);
 
   uint8_t l = readline(timeout);
 
-  DEBUG_PRINT (F("\t<--- ")); DEBUG_PRINTLN(replybuffer);
+  //DEBUG_PRINT (F("\t<--- ")); DEBUG_PRINTLN(replybuffer);
+  DBG("\t<--- %s", replybuffer);
 
   return l;
 }
