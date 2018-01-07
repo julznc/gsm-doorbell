@@ -31,16 +31,6 @@
 #include "FONAPlatStd.h"
 
 
-
-#ifndef DEBUG_PRINT
-// debug is disabled
-
-#define DEBUG_PRINT(...)
-#define DEBUG_PRINTLN(...)
-
-#endif
-
-
 #ifndef prog_char_strcmp
 #define prog_char_strcmp(a, b)					strcmp((a), (b))
 #endif

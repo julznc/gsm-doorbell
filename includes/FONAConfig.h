@@ -24,8 +24,7 @@
 #define ADAFRUIT_FONA_LIBRARY_SRC_INCLUDES_FONACONFIG_H_
 
 /* ADAFRUIT_FONA_DEBUG
- * When defined, will cause extensive debug output on the
- * DebugStream set in the appropriate platform/ header.
+ * When defined, will cause extensive debug output on the serial
  */
 
 #define ADAFRUIT_FONA_DEBUG
