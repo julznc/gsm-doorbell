@@ -11,8 +11,7 @@
 #define FONA_RI       11  // Ring Indicator pin
 
 
-HardwareSerial *fonaSerial = &Serial1;
-Adafruit_FONA fona = Adafruit_FONA(FONA_KEY, FONA_PSTAT, FONA_RST, FONA_RI);
+Adafruit_FONA fona = Adafruit_FONA(&Serial1, FONA_KEY, FONA_PSTAT, FONA_RST, FONA_RI);
 
 void setup()
 {
@@ -26,9 +25,8 @@ void setup()
 
   pinMode(STATUS_LED, OUTPUT);
 
-  fonaSerial->begin(9600);
   DBG("detecting fona device...");
-  if (!fona.begin(fonaSerial)) {
+  if (!fona.begin(9600)) {
     ERR("Couldn't find FONA");
     while (1) delay(100);
   }

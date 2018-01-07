@@ -24,13 +24,12 @@
 #endif
 
 
-Adafruit_FONA::Adafruit_FONA(int8_t key, int8_t pstat, int8_t rst, int8_t ri)
-  : _keypin(key), _pstatpin(pstat), _rstpin(rst), _ripin(ri), _type(0)
+Adafruit_FONA::Adafruit_FONA(FONASerialType *port, int8_t key, int8_t pstat, int8_t rst, int8_t ri)
+  : mySerial(port), _keypin(key), _pstatpin(pstat), _rstpin(rst), _ripin(ri), _type(0)
 {
   apn = F("FONAnet");
   apnusername = 0;
   apnpassword = 0;
-  mySerial = 0;
   httpsredirect = false;
   useragent = F("FONA");
   ok_reply = F("OK");
@@ -40,8 +39,9 @@ uint8_t Adafruit_FONA::type(void) {
   return _type;
 }
 
-boolean Adafruit_FONA::begin(Stream *port) {
-  mySerial = port;
+boolean Adafruit_FONA::begin(uint16_t baud) {
+
+  mySerial->begin(baud);
 
   pinMode(_keypin, OUTPUT);
   pinMode(_pstatpin, INPUT);

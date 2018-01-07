@@ -67,10 +67,10 @@
 #define FONA_CALL_RINGING 3
 #define FONA_CALL_INPROGRESS 4
 
-class Adafruit_FONA : public FONAStreamType {
+class Adafruit_FONA : public Stream {
  public:
-  Adafruit_FONA(int8_t key, int8_t pstat, int8_t rst, int8_t ri);
-  boolean begin(FONAStreamType *port);
+  Adafruit_FONA(FONASerialType *port, int8_t key, int8_t pstat, int8_t rst, int8_t ri);
+  boolean begin(uint16_t baud);
   uint8_t type();
 
   // Stream
@@ -199,6 +199,7 @@ class Adafruit_FONA : public FONAStreamType {
 
 
  protected:
+  FONASerialType *mySerial;
   int8_t _keypin;
   int8_t _pstatpin;
   int8_t _rstpin;
@@ -245,15 +246,13 @@ class Adafruit_FONA : public FONAStreamType {
 
   static boolean _incomingCall;
   static void onIncomingCall();
-
-  FONAStreamType *mySerial;
 };
 
 class Adafruit_FONA_3G : public Adafruit_FONA {
 
  public:
-  Adafruit_FONA_3G (int8_t key, int8_t pstat, int8_t rst, int8_t ri)
-      : Adafruit_FONA(key, pstat, rst, ri)
+  Adafruit_FONA_3G (FONASerialType *port, int8_t key, int8_t pstat, int8_t rst, int8_t ri)
+      : Adafruit_FONA(port, key, pstat, rst, ri)
         { _type = FONA3G_A; }
 
   boolean getBattVoltage(uint16_t *v);
