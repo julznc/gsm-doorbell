@@ -2,7 +2,7 @@
 #include <Arduino.h>
 #include "utils.h"
 
-void serial_init(void)
+static void serial_init(void)
 {
   static int initialized = 0;
   if (!initialized) {
@@ -13,7 +13,8 @@ void serial_init(void)
 }
 void serial_print(const char *fmt, ...)
 {
-  char buff[256];
+  char buff[512];
+  serial_init();
   va_list args;
   va_start (args, fmt);
   vsnprintf(buff, sizeof(buff), fmt, args);
