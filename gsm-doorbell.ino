@@ -10,11 +10,14 @@
 #define FONA_RST      2   // Reset pin
 #define FONA_RI       11  // Ring Indicator pin
 
+#define OWNER_NUMBER    "+639217529353"
 
 Adafruit_FONA fona = Adafruit_FONA(&Serial1, FONA_KEY, FONA_PSTAT, FONA_RST, FONA_RI);
 
 void update_status(void);
 void check_fona(void);
+void process_sms(char *from, char *message);
+
 char imei[16] = {0};
 
 void setup()
@@ -104,7 +107,8 @@ void check_fona(void)
 
   char senderIDbuffer[32];  // sender number
   if (! fona.getSMSSender(slot, senderIDbuffer, sizeof(senderIDbuffer)-1)) {
-    ERR("Didn't find SMS message in slot!");
+    ERR("Didn't find SMS message in slot!");\
+    //return;
   }
   PRINT("FROM: %s", senderIDbuffer);
 
@@ -120,5 +124,51 @@ void check_fona(void)
   } else {
     ERR("Couldn't delete SMS in slot %d", slot);
     fona.print(F("AT+CMGD=?\r\n"));
+  }
+
+  if (smslen) {
+    process_sms(senderIDbuffer, smsBuffer);
+  }
+}
+
+void process_sms(char *from, char *message)
+{
+  char fwdBuffer[256];
+  // if not from the owner...
+  if (0!=strcmp(from, OWNER_NUMBER)) {
+    snprintf(fwdBuffer, sizeof(fwdBuffer)-1, "%s: %s",
+             from, message);
+    if (!fona.sendSMS(OWNER_NUMBER, fwdBuffer)) {
+      ERR("forward sms failed!");
+    } else {
+      PRINT("sms forwarded to owner");
+    }
+    return;
+  }
+
+  // parse message from the owner
+  char *cmd = strtok(message, "/ ");
+  if (NULL==cmd)
+    return;
+
+  PRINT("cmd: %s", cmd);
+  // todo: other commands
+  if (0 != strcasecmp("fwd", cmd)) {
+    ERR("unkown command %s", cmd);
+    return;
+  }
+
+  char *arg = strtok(NULL, "/ ");
+  if (NULL==arg)
+    return;
+
+  char *msg = arg + strlen(arg) + 1;
+
+  PRINT("arg: %s", arg);
+  PRINT("msg: %s", msg);
+  if (!fona.sendSMS(arg, msg)) {
+    ERR("forward sms failed!");
+  } else {
+    PRINT("sms forwarded to %s", arg);
   }
 }
