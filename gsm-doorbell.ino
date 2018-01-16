@@ -10,12 +10,13 @@
 #define FONA_RST      2   // Reset pin
 #define FONA_RI       11  // Ring Indicator pin
 
-#define OWNER_NUMBER    "+639217529353"
+static const char *OWNER_NUMBER = "+639217529353";
 
 Adafruit_FONA fona = Adafruit_FONA(&Serial1, FONA_KEY, FONA_PSTAT, FONA_RST, FONA_RI);
 
 void update_status(void);
 void check_fona(void);
+void process_call(void);
 void process_sms(char *from, char *message);
 
 char imei[16] = {0};
@@ -39,8 +40,11 @@ void setup()
     PRINT("IMEI: %s", imei);
   }
 
-  //set up the FONA to send a +CMTI notification when an SMS is received
+  // set up the FONA to send a +CMTI notification when an SMS is received
   fona.print("AT+CNMI=2,1\r\n");
+
+  // set up ring indicator interrupt
+  fona.callerIdNotification(true, digitalPinToInterrupt(FONA_RI));
 
   PRINT("FONA Ready");
 }
@@ -97,6 +101,11 @@ void check_fona(void)
   //PRINT("notif (%u): %s", charCount, notificationBuffer);
   PRINT("%s", notificationBuffer);
 
+  if (0==strncmp(notificationBuffer, "RING", 5)) {
+    process_call();
+    return;
+  }
+
   // sms slot number
   int slot = 0;
   if (1 != sscanf(notificationBuffer, "+CMTI: " FONA_PREF_SMS_STORAGE ",%d", &slot)) {
@@ -131,11 +140,40 @@ void check_fona(void)
   }
 }
 
+void process_call(void)
+{
+  uint8_t callstat = fona.getCallStatus();
+  if (3 != callstat)
+    return; // not ringing [anymore]
+  char callerIDbuffer[32];
+
+  memset(callerIDbuffer, 0, sizeof(callerIDbuffer));
+  if (!fona.incomingCallNumber(callerIDbuffer)) {
+    ERR("unable to get caller number");
+    fona.hangUp();
+    return;
+  }
+
+  PRINT("%s is calling...", callerIDbuffer);
+  const char *allowed_caller = OWNER_NUMBER + 3; // "+3" -> skip country code
+  if (NULL==strstr(callerIDbuffer, allowed_caller)) {
+    ERR("not %s", allowed_caller);
+    fona.hangUp(); // accept only the owner
+    return;
+  }
+
+  if (!fona.pickUp()) {
+    ERR("pickup failed");
+  } else {
+    PRINT("on-going call");
+  }
+}
+
 void process_sms(char *from, char *message)
 {
   char fwdBuffer[256];
   // if not from the owner...
-  if (0!=strcmp(from, OWNER_NUMBER)) {
+  if (0 != strcmp(from, OWNER_NUMBER)) {
     snprintf(fwdBuffer, sizeof(fwdBuffer)-1, "%s: %s",
              from, message);
     if (!fona.sendSMS(OWNER_NUMBER, fwdBuffer)) {
