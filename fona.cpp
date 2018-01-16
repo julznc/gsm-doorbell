@@ -593,12 +593,12 @@ boolean Adafruit_FONA::sendSMS(const char *smsaddr, const char *smsmsg) {
 
   DEBUG_PRINT("> %s", smsmsg);
 
-  mySerial->println(smsmsg);
-  mySerial->println();
+  mySerial->print(smsmsg);
+  //mySerial->println();
   mySerial->write(0x1A);
 
   DEBUG_PRINT("^Z");
-
+#if 0
   if ( (_type == FONA3G_A) || (_type == FONA3G_E) ) {
     // Eat two sets of CRLF
     readline(200);
@@ -607,7 +607,7 @@ boolean Adafruit_FONA::sendSMS(const char *smsaddr, const char *smsmsg) {
     //DEBUG_PRINT("Line 2: %u", strlen(replybuffer));
   }
   readline(10000); // read the +CMGS reply, wait up to 10 seconds!!!
-  //DEBUG_PRINT("Line 3: %u", strlen(replybuffer));
+  //DEBUG_PRINT("Line 3 (%u); %s", strlen(replybuffer), replybuffer);
   if (strstr(replybuffer, "+CMGS") == 0) {
     return false;
   }
@@ -617,8 +617,29 @@ boolean Adafruit_FONA::sendSMS(const char *smsaddr, const char *smsmsg) {
   if (strcmp(replybuffer, "OK") != 0) {
     return false;
   }
-
   return true;
+#else // wait for "OK" or "ERROR"
+  uint16_t timeout = 10*1000;
+  uint16_t charCount = 0;
+  char *p = replybuffer;
+  memset(replybuffer, 0, sizeof(replybuffer));
+  while (timeout-- && charCount < sizeof(replybuffer)) {
+    while (mySerial->available()) {
+      *p++ = mySerial->read();
+      charCount++;
+      if (strstr(replybuffer, "OK")) {
+        //DEBUG_PRINT("* %s", replybuffer);
+        return true;
+      }
+      else if (strstr(replybuffer, "ERROR")) {
+        //DEBUG_PRINT("* %s", replybuffer);
+        return false;
+      }
+    }
+    delay(1);
+  }
+  return false;
+#endif
 }
 
 

@@ -7,7 +7,8 @@ static void serial_init(void)
   static int initialized = 0;
   if (!initialized) {
     SerialUSB.begin(115200);
-    while (!SerialUSB) ;
+    //while (!SerialUSB) ;
+    delay(500);
     initialized = 1;
   }
 }
