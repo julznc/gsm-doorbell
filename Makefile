@@ -92,7 +92,7 @@ clean:
 	rm -rf $(USER_OBJECTS) $(VARIANT_OBJECT) $(CORE_OBJECTS) $(CORE_LIB) $(PROJECT).elf $(PROJECT).map $(PROJECT).bin
 
 bootload:
-	@stty -F /dev/$(PORT) 1200 && sleep 2
+	stty -F /dev/$(PORT) 1200 && sleep 3
 	$(BOSSAC) --port=$(PORT) -U true -i -e -w -v $(PROJECT).bin -R
 
 monitor:

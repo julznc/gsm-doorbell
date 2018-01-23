@@ -51,14 +51,18 @@ boolean Adafruit_FONA::begin(uint16_t baud) {
   digitalWrite(_keypin, HIGH);
   digitalWrite(_rstpin, HIGH);
 
+  unsigned long off_ms = millis();
+
   if (true != setPower(true)) {
     ERR("unable to power on");
     return false;
   }
 
-  if (true != reset()) {
-    ERR("unable to reset");
-    return false;
+  if (millis() - off_ms > 500UL) {
+    if (true != reset()) {
+      ERR("unable to reset");
+      return false;
+    }
   }
 
   // turn off Echo!
@@ -278,7 +282,7 @@ uint8_t Adafruit_FONA::getRSSI(void) {
 
 boolean Adafruit_FONA::setAudio(uint8_t a) {
   // 0 is headset, 1 is external audio
-  if (a > 1) return false;
+  if (a > FONA_HANDFREEAUDIO) return false;
 
   return sendCheckReply(F("AT+CHFA="), a, ok_reply);
 }
@@ -318,7 +322,7 @@ boolean Adafruit_FONA_3G::playToolkitTone(uint8_t t, uint16_t len) {
 
 boolean Adafruit_FONA::setMicVolume(uint8_t a, uint8_t level) {
   // 0 is headset, 1 is external audio
-  if (a > 1) return false;
+  if (a > FONA_HANDFREEAUDIO) return false;
 
   return sendCheckReply(F("AT+CMIC="), a, level, ok_reply);
 }
@@ -1799,7 +1803,7 @@ uint8_t Adafruit_FONA::readline(uint16_t timeout, boolean multiline) {
   return replyidx;
 }
 
-uint8_t Adafruit_FONA::getReply(char *send, uint16_t timeout) {
+uint8_t Adafruit_FONA::getReply(const char *send, uint16_t timeout) {
   flushInput();
 
   DEBUG_PRINT("\t---> %s", send);
@@ -1895,7 +1899,7 @@ uint8_t Adafruit_FONA::getReplyQuoted(FONAFlashStringPtr prefix, FONAFlashString
   return l;
 }
 
-boolean Adafruit_FONA::sendCheckReply(char *send, char *reply, uint16_t timeout) {
+boolean Adafruit_FONA::sendCheckReply(const char *send, const char *reply, uint16_t timeout) {
   if (! getReply(send, timeout) )
     return false;
 

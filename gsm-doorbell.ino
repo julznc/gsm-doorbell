@@ -10,6 +10,8 @@
 #define FONA_RST      2   // Reset pin
 #define FONA_RI       11  // Ring Indicator pin
 
+#define SPEAKER_SHUTDOWN    3
+
 static const char *OWNER_NUMBER = "+639217529353";
 
 Adafruit_FONA fona = Adafruit_FONA(&Serial1, FONA_KEY, FONA_PSTAT, FONA_RST, FONA_RI);
@@ -26,6 +28,8 @@ void setup()
   delay(3000);
   PRINT("started %s", "gsm-doorbell");
   update_status();
+  pinMode(SPEAKER_SHUTDOWN, OUTPUT);
+  digitalWrite(SPEAKER_SHUTDOWN, LOW);
 
   DBG("detecting fona device...");
   if (!fona.begin(9600)) {
@@ -46,6 +50,19 @@ void setup()
   // set up ring indicator interrupt
   fona.callerIdNotification(true, digitalPinToInterrupt(FONA_RI));
 
+  if (!fona.setAudio(FONA_HANDFREEAUDIO)) {
+    ERR("set audio failed");
+  }
+  if (!fona.setVolume(80)) {
+    ERR("set volume failed");
+  }
+  if (!fona.setMicVolume(FONA_HANDFREEAUDIO, 10)) {
+    ERR("set mic volume failed");
+  }
+
+  // fona.sendCheckReply("AT+ECHO?", "");
+  //fona.sendCheckReply("AT+ECHO=1,96,224,5256,20488,1", "");
+
   PRINT("FONA Ready");
 }
 
@@ -53,6 +70,7 @@ void loop()
 {
   update_status();
   check_fona();
+  delay(10);
 }
 
 void update_status(void)
@@ -102,7 +120,13 @@ void check_fona(void)
   PRINT("%s", notificationBuffer);
 
   if (0==strncmp(notificationBuffer, "RING", 5)) {
+    digitalWrite(SPEAKER_SHUTDOWN, HIGH);
     process_call();
+    return;
+  }
+
+  if (0==strncmp(notificationBuffer, "NO CARRIER", 10)) {
+    digitalWrite(SPEAKER_SHUTDOWN, LOW);
     return;
   }
 
